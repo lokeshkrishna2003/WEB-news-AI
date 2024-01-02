@@ -1,0 +1,215 @@
+const API_KEY = '1f5cd9470fd94088894153fafdb96b1d';
+const USER_AGENT = 'NEWS-AI-INTEGRATION/1.0';
+let savedarticles = [];
+let currentIndex = 0;
+
+initializeSavedArticles();
+
+function initializeSavedArticles() {
+  const news_url = `https://newsapi.org/v2/top-headlines?apiKey=${API_KEY}&country=in`;
+
+  api.request({
+    url: news_url,
+    headers: {
+      'User-Agent': USER_AGENT,
+    },
+  }, (error, response, body) => {
+    if (error) {
+      console.error('Error fetching news:', error);
+      return;
+    }
+
+    try {
+      const responseData = JSON.parse(body);
+
+      if (!responseData || !responseData.articles || !Array.isArray(responseData.articles)) {
+        console.error('Invalid API response:', responseData);
+        return;
+      }
+
+      savedarticles = responseData.articles;
+    } catch (parseError) {
+      console.error('Error parsing API response:', parseError);
+    }
+  });
+}
+
+intent('What does this app do?', 'What can I do here?',
+  reply('This is a news project.'));
+
+intent(
+  'give me the news from $(source* (.*))',
+  'what are the (latest|recent) news from $(source* (.*))',
+  'display the (latest|recent) news from $(source* (.*))',
+  (p) => {
+    let news_url = `https://newsapi.org/v2/top-headlines?apiKey=${API_KEY}`;
+
+    if (p.source.value) {
+      news_url = `${news_url}&sources=${p.source.value.toLowerCase().split(" ").join('-')}`;
+    }
+
+    fetchAndDisplayNews(p, news_url);
+  }
+);
+
+intent(
+  'give me the news about $(term* (.*))',
+  'give me the news from $(term* (.*))',
+  'What\'s up with $(term* (.*))',
+  'what are the (latest|recent) news about $(term* (.*))',
+  'display the (latest|recent) news about $(term* (.*))',
+  'what are the (latest|recent) news in $(term* (.*))',
+  (p) => {
+    let news_url = `https://newsapi.org/v2/everything?apiKey=${API_KEY}`;
+
+    if (p.term.value) {
+      news_url = `${news_url}&q=${p.term.value}`;
+    }
+
+    fetchAndDisplayNews(p, news_url);
+  }
+);
+
+const CATEGORIES = ['business', 'entertainment', 'general', 'health', 'science', 'sports', 'technology'];
+const CATEGORIES_INTENT = `${CATEGORIES.map((category) => `{${category}}~${category}`).join('|')}`;
+
+intent(
+  `(show|what is|tell me|what's|what are|what're|read) (the) (recent|latest) $(N news|headlines) (in|about|on) {$(C~ ${CATEGORIES_INTENT})}`,
+  `(read|show|get|bring me|give me) (the) (recent|latest) {$(C~ ${CATEGORIES_INTENT})} $(N news|headlines)`,
+  (p) => {
+    let news_url = `https://newsapi.org/v2/top-headlines?apiKey=${API_KEY}&country=in`;
+
+    if (p.C.value) {
+      news_url = `${news_url}&category=${p.C.value}`;
+    }
+
+    fetchAndDisplayNews(p, news_url);
+  }
+);
+
+intent(
+  `(show|what is|tell me|what's|what are|what're|read) (the) (recent|latest) $(N news|headlines)`,
+  `(read|show|get|bring me|give me) (the) (recent|latest) $(N news|headlines)`,
+  (p) => {
+    const news_url = `https://newsapi.org/v2/top-headlines?apiKey=${API_KEY}&country=in`;
+    fetchAndDisplayNews(p, news_url);
+  }
+);
+
+const fetchAndDisplayNews = (p, news_url) => {
+  api.request({
+    url: news_url,
+    headers: {
+      'User-Agent': USER_AGENT,
+    },
+  }, (error, response, body) => {
+    if (error) {
+      console.error('Error fetching news:', error);
+      p.play('Sorry, there was an error fetching the news.');
+      return;
+    }
+
+    try {
+      const responseData = JSON.parse(body);
+
+      if (!responseData || !responseData.articles || !Array.isArray(responseData.articles)) {
+        console.error('Invalid API response:', responseData);
+        p.play('Sorry, the API response is not in the expected format.');
+        return;
+      }
+
+      const articles = responseData.articles;
+
+      if (articles.length === 0) {
+        p.play('No news articles were found for this query.');
+        return;
+      }
+      currentIndex = 0;
+      savedarticles = articles;
+      p.play({ command: 'newHeadlines', articles });
+
+      if (p.C && p.C.value) {
+        p.play(`Here are the (latest|recent) articles on ${p.C.value}.`);
+      } else if (p.source && p.source.value) {
+        p.play(`Here are the (latest|recent) news from ${p.source.value}.`);
+      } else if (p.term && p.term.value) {
+        p.play(`Here are the (latest|recent) news articles about ${p.term.value}.`);
+      } else {
+        p.play('Here are the (latest|recent) news.');
+      }
+
+      p.play('Would you like me to read the headlines?');
+      p.then(confirmation);
+    } catch (parseError) {
+      console.error('Error parsing API response:', parseError);
+      p.play('Sorry, there was an issue parsing the API response.');
+    }
+  });
+};
+
+const confirmation = context(() => {
+  const articlesPerBatch = 5;
+
+  const readNextHeadlines = (p) => {
+    const remainingArticles = savedarticles.slice(currentIndex);
+    const articlesToRead = remainingArticles.slice(0, articlesPerBatch);
+
+    if (articlesToRead.length > 0) {
+      for (let i = 0; i < articlesToRead.length; i++) {
+        const article = articlesToRead[i];
+        p.play({ command: 'highlight', article });
+        p.play(`${article.title}`);
+      }
+      currentIndex += articlesToRead.length;
+
+      if (currentIndex < savedarticles.length) {
+        p.play('Would you like to hear more headlines?');
+        p.then(confirmation);
+      } else {
+        p.play('That\'s all the headlines for now.');
+        currentIndex = 0;
+      }
+    } else {
+      p.play('That\'s all the headlines for now.');
+      currentIndex = 0;
+    }
+  };
+
+  intent('yes', (p) => {
+    readNextHeadlines(p);
+  });
+
+  intent('no', (p) => {
+    p.play('Okay, if you have any more questions or need assistance, feel free to ask.');
+    currentIndex = 0;
+  });
+});
+
+intent(
+  '(open|show) article (number|) $(number* (.*))',
+  '(open|show) (article|number) $(number* (.*))',
+  (p) => {
+    const extractedNumber = p.number.value.replace(/\D/g, '');
+
+    if (extractedNumber) {
+      const articleIndex = parseInt(extractedNumber) - 1;
+
+      if (articleIndex >= 0 && articleIndex < savedarticles.length) {
+        const articleToOpen = savedarticles[articleIndex];
+
+        if (articleToOpen.url) {
+          p.play({ command: 'open', url: articleToOpen.url, number: extractedNumber, articles: savedarticles });
+        } else {
+          p.play("Sorry, I couldn't find the URL for that article.");
+        }
+      } else {
+        p.play("Sorry, I couldn't find the article you requested.");
+      }
+    }
+  }
+);
+
+intent('go back','go back to the main page','go back to home','go back to home page',(p)=>{
+  p.play('Sure, going back to the (main|home) page.');
+  p.play({ command: 'newHeadlines', articles: [] });
+});
