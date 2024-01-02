@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+
 import {
   Card,
   CardActionArea,
@@ -57,8 +58,8 @@ function NewsCard({
         </CardContent>
       </CardActionArea>
       <CardActions className={classes.cardActions}>
-        <Button size="small" color="primary">
-          Learn more
+        <Button href={url} target="__blank" size="small" color="primary">
+         Learn more
         </Button>
         <Typography variant="h5" color="textSecondary">
           {i + 1}

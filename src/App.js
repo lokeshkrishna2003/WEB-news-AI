@@ -1,12 +1,21 @@
 import './App.css';
 import React, { useState, useEffect } from 'react';
 import alanBtn from '@alan-ai/alan-sdk-web';
+import AOS from 'aos';
 import useStyles from './styles.js';
 import NewsCards from './components/Newscards/NewsCards';
-import alanlogo from './components/images/allanlogo.jpeg';
+
+import newsimg from './components/images/newsimg.png';
+// import voiceassistancenews from './components/images/voiceassistancenews.png';
+
+
+
+
 import { Typography } from '@material-ui/core';
 
-const alanKey = '9d0a52bc9c55f689f17876c61a435b8c2e956eca572e1d8b807a3e2338fdd0dc/stage'; // Replace with your Alan API key
+// const alanKey = '9d0a52bc9c55f689f17876c61a435b8c2e956eca572e1d8b807a3e2338fdd0dc/stage'; // Replace with your Alan API key
+
+const alanKey = 'c3e379c0de48a945f17876c61a435b8c2e956eca572e1d8b807a3e2338fdd0dc/stage'; // Replace with your Alan API key
 
 function App(props) {
   const classes = useStyles();
@@ -16,6 +25,12 @@ function App(props) {
 
   // Create the Alan Button instance only once
   useEffect(() => {
+ 
+    AOS.init({
+      once:false,
+      mirror:true
+    });
+
     const alanInstance = alanBtn({
       key: alanKey,
       onCommand: (commandData) => {
@@ -72,9 +87,10 @@ function App(props) {
 
   return (
     <>
-      <div className={classes.logoContainer}>
+      <div className={classes.logoContainer} data-aos="fade-down">
         {newsArticles.length ? (
-          <div className={classes.infoContainer}>
+          <div className={classes.infoContainer} data-aos="fade-up">
+
             <div className={classes.card}>
               <Typography variant="h5" component="h2">
                 Try saying: <br />
@@ -92,18 +108,24 @@ function App(props) {
           </div>
         ) : null}
         <img
-          src={alanlogo}
+          src={newsimg}
           alt="alan logo"
           style={{
-            height: '30vmin',
+            height: '35vmin',
+            width:'70%',
             borderRadius: '20%',
             padding: '0 5%',
             margin: '3% 0',
           }}
           className={classes.alanLogo}
-        />
+       data-aos='zoom-in' />
+      
       </div>
       <NewsCards articles={newsArticles} activeArticle={activeArticle} />
+
+
+
+
     </>
   );
 }

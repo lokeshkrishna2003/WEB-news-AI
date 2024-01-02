@@ -1,13 +1,19 @@
-#root,html,body{
+#root, html, body {
   height: 100vh;
 }
-body{
+
+body {
   margin: 0px;
-  background-color: whitesmoke;
+  /* background: linear-gradient(to right, #0f0f0f, #3c3c3c); */
+  background: black;
+  /* Subtle gradient background */
+
 }
-*{
+
+* {
   box-sizing: border-box;
 }
-html{
+
+html {
   scroll-behavior: smooth;
 }
