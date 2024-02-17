@@ -14,7 +14,7 @@ export default makeStyles({
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'space-between',
-    height:'90vh',
+
     width:'100%',
 
     borderBottom: '10px solid grey', // Lighter shade for contrast
